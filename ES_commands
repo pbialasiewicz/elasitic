@@ -1,0 +1,184 @@
+####################################
+GET ALL TEMPLATES
+####################################
+
+curl -X GET "localhost:9200/_template"
+
+####################################
+DELETE TEMPLATE
+####################################
+
+curl -X DELETE "localhost:9200/_template/client.flows.custom1"
+
+
+#######################################
+GET MAPPING
+#######################################
+
+curl -X GET "localhost:9200/_all/_mapping
+
+
+####################################
+GET INDEX DATA
+###################################
+
+curl -X GET "localhost:9200/twitter"
+curl -X GET "localhost:9200/twitter"?pretty
+
+#################################
+DELETE INDEX
+#################################
+
+curl -X DELETE "localhost:9200/client.flows-2018.05.16_reindex"
+
+#################################
+REINDEX DATA
+#################################
+
+curl -X POST "localhost:9200/_reindex" -H 'Content-Type: application/json' -d'
+{
+  "source": {
+    "index": "client.flows-2018.06.07"
+  },
+  "dest": {
+    "index": "client.flows-2018.06.07_reindex"
+  }
+}
+'
+
+#################################
+REINDEX WITH PAINLESS
+#################################
+
+curl -X POST "localhost:9200/_reindex" -H 'Content-Type: application/json' -d'
+{
+  "source": {
+    "index": "client.flows-*"
+  },
+  "dest": {
+    "index": "metricbeat"
+  },
+  "script": {
+    "lang": "painless",
+    "source": "ctx._index = \u0027client.flows-\u0027 + (ctx._index.substring(\u0027client.flows-\u0027.length(), ctx._index.length())) + \u0027-reindex\u0027"
+  }
+}
+'
+
+
+#################################
+LIST ALL INDICES
+#################################
+
+curl -X GET "localhost:9200/_cat/indices?v"
+
+#################################
+ADD ALIAS
+#################################
+
+
+
+curl -X POST "localhost:9200/_aliases" -H 'Content-Type: application/json' -d'
+{
+    "actions" : [
+        { "add" : { "index" : "test1", "alias" : "alias1" } }
+    ]
+}
+'
+
+
+#################################
+ADD a PIPELINE
+#################################
+curl -X PUT "localhost:9200/_ingest/pipeline/add_geoip" -H 'Content-Type: application/json' -d'
+{
+  "processors": [
+    {
+      "geoip": {
+        "field": "src"
+      }
+    }
+  ]
+}
+'
+
+#################
+REDINDEX DATA WITH A PIPELINE
+################
+
+curl -X POST "localhost:9200/_reindex" -H 'Content-Type: application/json' -d'
+{
+  "source": {
+    "index": "test_flows"
+  },
+  "dest": {
+    "index": "test_flows_pipe"
+    "pipeline": "add_geoip"
+  }
+}
+'
+
+
+####################
+ADD S3 bucket
+#####################
+
+curl -X PUT "localhost:9200/_snapshot/my_s3_repository" -H 'Content-Type: application/json' -d'
+{
+  "type": "s3",
+  "settings": {
+    "bucket": "evengx-es-repo"
+  }
+}
+'
+
+####################
+MAKE A SNAPSHOOT
+######################
+
+curl -X PUT "localhost:9200/_snapshot/my_s3_repository/flows_reindex_07_06_2018" -H 'Content-Type: application/json' -d'
+{
+    "indices": "index_1", "index_2"
+}
+'
+
+#################
+CHECK STATUS OF A SNAPSHOOT
+#################
+
+curl -X GET "localhost:9200/_snapshot/my_s3_repository/flows_reindex_07_06_2018/_status?pretty"
+
+
+#################
+SNAPSHOOT WITH WAIT
+#################
+
+curl -X PUT "localhost:9200/_snapshot/my_s3_repository/07_06_2018?wait_for_completion=true"
+
+
+###########
+LIST ALL SNAPSHOOTS
+###########
+curl -XGET 'localhost:9200/_snapshot/my_s3_repository/_all?pretty'
+
+
+###########
+RESTORE SNAPSHOOT
+###########
+
+curl -XPOST "localhost:9200/_snapshot/my_s3_repository/snapshot_1/_restore?wait_for_completion=true"
+
+
+###########
+DELETE QUERY (needs index mapping change ===> reindexing )
+###########
+
+curl -X POST "localhost:9200/client.splunk-2018.06.18/_delete_by_query" -H 'Content-Type: application/json' -d'
+{
+  "query": {
+    "match": {
+      "level.keyword": "info"
+    }
+  }
+}
+'
